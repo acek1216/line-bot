@@ -62,7 +62,7 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    user_message = event.message.text
+    user_message = event.message.text.strip()
     ai_response_text = ""
     try:
         # --- Gemini AIにリクエストを送信 ---
@@ -85,6 +85,7 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
