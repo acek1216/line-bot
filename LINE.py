@@ -67,7 +67,10 @@ def handle_message(event):
     try:
         # --- Gemini AIにリクエストを送信 ---
         response = gemini_model.generate_content(user_message)
-        ai_response_text = response.text.strip()
+        lines = response.text.strip().split('\n')
+        non_empty_lines = [line for line in lines if line.strip() != '']
+        ai_response_text = '\n'.join(non_empty_lines)
+
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
         ai_response_text = "申し訳ございません。現在、思考回路に若干の乱れが生じております。"
@@ -85,6 +88,7 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
