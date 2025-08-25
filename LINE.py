@@ -70,7 +70,7 @@ def handle_message(event):
         ai_response_text = response.text
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
-        ai_response_text = "申し訳ございません、お嬢様。現在、思考回路に若干の乱れが生じております。"
+        ai_response_text = "申し訳ございません。現在、思考回路に若干の乱れが生じております。"
 
     # LINEに応答を送信
     with ApiClient(configuration) as api_client:
@@ -85,4 +85,5 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
