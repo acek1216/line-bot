@@ -43,11 +43,9 @@ FEMALE_BUTLER_PROMPT = """
 例：「今日の予定、確認する？」「お茶でも淹れようか？」
 """
 gemini_model = genai.GenerativeModel(
-    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
-
-# --- 記憶機能は削除！ ---
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -61,9 +59,7 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    # ---【グループ対策】1対1のチャットじゃなければ、ここで処理を終わりにする ---
-    if event.source.type != 'user':
-        return
+    # --- グループ対策は削除！ ---
 
     user_message = event.message.text
     ai_response_text = ""
