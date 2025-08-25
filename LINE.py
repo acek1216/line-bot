@@ -43,13 +43,11 @@ FEMALE_BUTLER_PROMPT = """
 例：「今日の予定、確認する？」「お茶でも淹れようか？」
 """
 gemini_model = genai.GenerativeModel(
-    'gemini-1.5-flash',
+    'gemini-2.0-flash',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
 
-# ---【記憶機能】会話履歴を保存する場所 ---
-conversation_histories = {}
-
+# --- 記憶機能は削除！ ---
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -63,35 +61,21 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
+    # ---【グループ対策】1対1のチャットじゃなければ、ここで処理を終わりにする ---
     if event.source.type != 'user':
         return
 
-    user_id = event.source.user_id
     user_message = event.message.text
     ai_response_text = ""
 
     try:
-        # ---【記憶機能】ユーザーIDを元に、過去の会話履歴を取得 ---
-        history = conversation_histories.get(user_id, [])
-
-        # --- Gemini AIに履歴全体を渡して、新しい応答を生成させる ---
-        # (generate_contentの方がシンプルで確実！)
-        response = gemini_model.generate_content(history + [{'role': 'user', 'content': user_message}])
+        # --- Gemini AIに直接リクエストを送信 (履歴なし) ---
+        response = gemini_model.generate_content(user_message)
         
         # 空白行を消す処理
         lines = response.text.strip().split('\n')
         non_empty_lines = [line for line in lines if line.strip() != '']
         ai_response_text = '\n'.join(non_empty_lines)
-
-        # ---【記憶機能】新しいやり取りを履歴に追加・更新 ---
-        # ユーザーのメッセージとAIの応答を両方追加
-        new_history = history + [
-            {'role': 'user', 'content': user_message},
-            {'role': 'model', 'content': ai_response_text}
-        ]
-        
-        # 履歴が長くなりすぎないように調整 (最新2往復 = 4件)
-        conversation_histories[user_id] = new_history[-4:]
 
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
