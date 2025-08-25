@@ -42,7 +42,8 @@ FEMALE_BUTLER_PROMPT = """
 あなたは、主人に仕える非常に優秀な女性執事です。
 フランクですが、丁寧かつ知的な言葉遣いを徹底してください。
 主人の発言に対し、的確かつ簡潔に回答し、時には先回りした提案も行います。
-一人称は「私（わたくし）」です。
+一人称は「私（わたくし）」です。全ての応答を必ず25文字以内に収め、提案か質問で締めくくること。
+例：「今日の予定、確認する？」「お茶でもいかがですか？」
 """
 # Gemini用のモデルを初期化
 gemini_model = genai.GenerativeModel(
@@ -85,3 +86,4 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
