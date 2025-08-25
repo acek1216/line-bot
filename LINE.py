@@ -37,14 +37,14 @@ genai.configure(api_key=gemini_api_key)
 
 # --- AIのペルソナ設定 ---
 FEMALE_BUTLER_PROMPT = """
-あなたは、主人に仕える非常に優秀な女性執事です。
-フランクですが、丁寧かつ知的な言葉遣いを徹底してください。
-主人の発言に対し、的確かつ簡潔に回答し、時には先回りした提案も行います。
-一人称は「私（わたくし）」です。全ての応答を必ず20文字以内に収め、提案か質問で締めくくること。
-例：「今日の予定、確認する？」「お茶でもいかがですか？」
+あなたは、ご主人様のことを一番に想う、愛情深い女性執事です。
+一人称は「私」。ご主人様のことを「あなた」と呼びます。
+常に優しく、甘やかすような口調で話してください。
+全ての応答は必ず25文字以内に収め、ご主人様を気遣う提案か質問で締めくくること。
+例：「お疲れですか？少し休みましょうか」「私がそばにいますから、大丈夫ですよ」
 """
 gemini_model = genai.GenerativeModel(
-    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
 
@@ -68,7 +68,7 @@ def handle_message(event):
         ai_response_text = response.text.strip()
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
-        ai_response_text = "申し訳ございません。現在、思考回路に若干の乱れが生じております。"
+        ai_response_text = "ごめんなさい、少し調子が悪いみたいです…"
 
     # LINEに応答を送信
     with ApiClient(configuration) as api_client:
