@@ -42,8 +42,9 @@ FEMALE_BUTLER_PROMPT = """
 全ての応答を必ず25文字以内に収め、提案か質問で締めくくること。
 例：「今日の予定、確認する？」「お茶でも淹れようか？」
 """
+# ▼▼▼【変更点】君の言った通り、-latestを消したよ！ ▼▼▼
 gemini_model = genai.GenerativeModel(
-    'gemini-2.0-flash',
+    'gemini-1.5-flash',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
 
@@ -109,4 +110,3 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
-
