@@ -42,7 +42,6 @@ FEMALE_BUTLER_PROMPT = """
 全ての応答を必ず25文字以内に収め、提案か質問で締めくくること。
 例：「今日の予定、確認する？」「お茶でも淹れようか？」
 """
-# ▼▼▼【変更点】君の言った通り、-latestを消したよ！ ▼▼▼
 gemini_model = genai.GenerativeModel(
     'gemini-1.5-flash',
     system_instruction=FEMALE_BUTLER_PROMPT
@@ -64,7 +63,6 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    # ---【グループ対策】1対1のチャットじゃなければ、ここで処理を終わりにする ---
     if event.source.type != 'user':
         return
 
@@ -72,26 +70,28 @@ def handle_message(event):
     user_message = event.message.text
     ai_response_text = ""
 
-    # ---【記憶機能】ここから ---
-    history = conversation_histories.get(user_id, [])
-    history.append({"role": "user", "content": user_message})
-    gemini_history = [msg for msg in history if msg['role'] in ['user', 'model']]
-    # ---【記憶機能】ここまで ---
-
     try:
-        chat_session = gemini_model.start_chat(history=gemini_history)
-        response = chat_session.send_message(user_message)
+        # ---【記憶機能】ユーザーIDを元に、過去の会話履歴を取得 ---
+        history = conversation_histories.get(user_id, [])
+
+        # --- Gemini AIに履歴全体を渡して、新しい応答を生成させる ---
+        # (generate_contentの方がシンプルで確実！)
+        response = gemini_model.generate_content(history + [{'role': 'user', 'content': user_message}])
         
+        # 空白行を消す処理
         lines = response.text.strip().split('\n')
         non_empty_lines = [line for line in lines if line.strip() != '']
         ai_response_text = '\n'.join(non_empty_lines)
 
-        history.append({"role": "model", "content": ai_response_text})
+        # ---【記憶機能】新しいやり取りを履歴に追加・更新 ---
+        # ユーザーのメッセージとAIの応答を両方追加
+        new_history = history + [
+            {'role': 'user', 'content': user_message},
+            {'role': 'model', 'content': ai_response_text}
+        ]
         
-        if len(history) > 4:
-            conversation_histories[user_id] = history[-4:]
-        else:
-            conversation_histories[user_id] = history
+        # 履歴が長くなりすぎないように調整 (最新2往復 = 4件)
+        conversation_histories[user_id] = new_history[-4:]
 
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
