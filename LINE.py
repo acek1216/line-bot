@@ -46,7 +46,7 @@ FEMALE_BUTLER_PROMPT = """
 """
 # Gemini用のモデルを初期化
 gemini_model = genai.GenerativeModel(
-    'gemini-1.5-flash',
+    'gemini-2.0-flash',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
 
@@ -62,12 +62,12 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    user_message = event.message.text.strip()
+    user_message = event.message.text
     ai_response_text = ""
     try:
         # --- Gemini AIにリクエストを送信 ---
         response = gemini_model.generate_content(user_message)
-        ai_response_text = response.text
+        ai_response_text = response.text.strip()
     except Exception as e:
         app.logger.error(f"Gemini AI Error: {e}")
         ai_response_text = "申し訳ございません。現在、思考回路に若干の乱れが生じております。"
@@ -85,6 +85,7 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
