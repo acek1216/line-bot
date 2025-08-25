@@ -44,7 +44,7 @@ FEMALE_BUTLER_PROMPT = """
 例：「お疲れですか？少し休みましょう」「私がそばにいますから、大丈夫ですよ」
 """
 gemini_model = genai.GenerativeModel(
-    'gemini-1.5-flash-latest',
+    'gemini-2.5-flash',
     system_instruction=FEMALE_BUTLER_PROMPT
 )
 
@@ -83,4 +83,5 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+
 
