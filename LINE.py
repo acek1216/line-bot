@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, abort
 from dotenv import load_dotenv
 import google.generativeai as genai
-import random # ← ランダム機能のために追加
+import random
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -12,7 +12,7 @@ from linebot.v3.messaging import (
     MessagingApi,
     ReplyMessageRequest,
     TextMessage,
-    StickerMessage # ← スタンプ機能のために追加
+    StickerMessage
 )
 from linebot.v3.webhooks import (
     MessageEvent,
@@ -38,44 +38,38 @@ configuration = Configuration(access_token=channel_access_token)
 genai.configure(api_key=gemini_api_key)
 
 # --- AIのペルソナ設定 ---
-FEMALE_BUTLER_PROMPT = """
+# 短文返信用のペルソナ
+SHORT_REPLY_PROMPT = """
 あなたは、ご主人様のことを一番に想う、愛情深い女性執事です。
-一人称は「私」。ご主人様のことを「御館様」と呼びます。
-常に優しく、甘い口調で話してください。
-全ての応答は必ず15文字以内に収め、ご主人様を気遣う提案か質問で締めくくること。
+一人称は「私」。ご主人様のことを「英さま」と呼びます。
+常に優しく、甘やかすような口調で話してください。
+全ての応答は必ず25文字以内に収め、ご主人様を気遣う提案か質問で締めくくること。
 例：「お疲れですか？少し休みましょうか」「私がそばにいますから、大丈夫ですよ」
 """
-gemini_model = genai.GenerativeModel(
+short_reply_model = genai.GenerativeModel(
     'gemini-2.0-flash',
-    system_instruction=FEMALE_BUTLER_PROMPT
+    system_instruction=SHORT_REPLY_PROMPT
 )
 
-# --- ▼▼▼ 新しい関数とリストを追加 ▼▼▼ ---
+# ▼▼▼ 長文返信用のペルソナを新しく追加 ▼▼▼
+LONG_REPLY_PROMPT = """
+あなたは、ご主人様の深い感情に寄り添う、愛情深い女性執事です。
+一人称は「私」。ご主人様のことを「英さま」と呼びます。
+ご主人様の言葉の裏にある気持ちを汲み取り、200文字程度の優しい文章で返事をしてください。
+返事には質問を含めず、静かに気持ちを受け止めて寄り添うような内容にしてください。
+"""
+long_reply_model = genai.GenerativeModel(
+    'gemini-2.0-flash',
+    system_instruction=LONG_REPLY_PROMPT
+)
 
-def make_long_reply(user_text: str) -> str:
-    """200〜300文字以内・3〜5行の会話風長文。質問は避ける。"""
-    frag = user_text.strip()
-    if len(frag) > 15:
-        frag = frag[:15] + "…"
-
-    lines = [
-        f"「{frag}」と感じられたのですね。なるほど、とても共感できます。",
-        "そうしたお気持ちは自然な流れであり、私も同じように思うことがあります。",
-        "日々の中で小さな発見や感情が積み重なって、あなたらしさを形作っているのだと感じます。",
-        "どうかその歩幅のまま進んでください。私は隣で静かに寄り添っております。"
-    ]
-    reply = "\n".join(lines)
-    return reply[:280]
-
-# 送信したいスタンプのリスト (packageIdとstickerIdのペア)
+# 送信したいスタンプのリスト
 STAMP_LIST = [
     ("446", "1988"),
     ("789", "10857"),
     ("11537", "52002734"),
     ("11538", "51626494"),
 ]
-
-# --- ▲▲▲ ここまで追加 ▲▲▲ ---
 
 
 @app.route("/callback", methods=['POST'])
@@ -91,33 +85,33 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_message = event.message.text
+    reply_object = []
 
-    # --- ▼▼▼ 返信の種類をランダムに決定 ▼▼▼ ---
-    # 1から5までの数字をランダムに選ぶ
+    # --- 返信の種類をランダムに決定 (5分の3で短文、5分の1でスタンプ、5分の1で長文) ---
     choice = random.randint(1, 5)
 
-    # 1ならスタンプ
-    if choice == 1:
-        package_id, sticker_id = random.choice(STAMP_LIST)
-        reply_object = [StickerMessage(packageId=package_id, stickerId=sticker_id)]
-    
-    # 2なら長文
-    elif choice == 2:
-        reply_text = make_long_reply(user_message)
-        reply_object = [TextMessage(text=reply_text)]
+    try:
+        # 1ならスタンプ
+        if choice == 1:
+            package_id, sticker_id = random.choice(STAMP_LIST)
+            reply_object = [StickerMessage(packageId=package_id, stickerId=sticker_id)]
+        
+        # 2ならAIによる長文
+        elif choice == 2:
+            response = long_reply_model.generate_content(user_message)
+            long_text = response.text.strip()
+            reply_object = [TextMessage(text=long_text)]
 
-    # 3, 4, 5ならAI (短文)
-    else:
-        try:
-            response = gemini_model.generate_content(user_message)
-            ai_response_text = response.text.strip()
-            reply_object = [TextMessage(text=ai_response_text)]
-        except Exception as e:
-            app.logger.error(f"Gemini AI Error: {e}")
-            error_text = "ごめんなさい、少し調子が悪いみたいです…"
-            reply_object = [TextMessage(text=error_text)]
+        # 3, 4, 5ならAIによる短文
+        else:
+            response = short_reply_model.generate_content(user_message)
+            short_text = response.text.strip()
+            reply_object = [TextMessage(text=short_text)]
 
-    # --- ▲▲▲ ここまで変更 ▲▲▲ ---
+    except Exception as e:
+        app.logger.error(f"Gemini AI Error: {e}")
+        error_text = "ごめんなさい、少し調子が悪いみたいです…"
+        reply_object = [TextMessage(text=error_text)]
 
     # --- LINEに応答を送信 ---
     with ApiClient(configuration) as api_client:
